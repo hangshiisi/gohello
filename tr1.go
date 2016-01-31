@@ -1,6 +1,5 @@
 package main
 
-
 import (
 	"fmt"
 	"github.com/hangshiisi/stringutil"
@@ -30,7 +29,7 @@ func mainFirst() {
 
 }
 
-func main() {
+func mainSecond() {
 	fmt.Println(stringutil.Reverse("!oG ,olleH"))
 	c = make(chan int)
 	go readyTwo("Tea", 2)
@@ -39,5 +38,12 @@ func main() {
 	//time.Sleep(5 * time.Second)
 	<-c
 	<-c
+
+}
+
+func main() {
+	fmt.Println(stringutil.Reverse("!oG ,olleH"))
+	time.Sleep(5 * time.Second)
+	OldMain()
 
 }
