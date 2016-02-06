@@ -41,7 +41,7 @@ func mainSecond() {
 
 }
 
-func main() {
+func secondMain() {
 	fmt.Println(stringutil.Reverse("!oG ,olleH"))
 	time.Sleep(5 * time.Second)
 	OldMain()
