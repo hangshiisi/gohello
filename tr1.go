@@ -47,3 +47,8 @@ func secondMain() {
 	OldMain()
 
 }
+
+func main() { 
+	secondMain()
+} 
+
