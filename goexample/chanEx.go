@@ -2,7 +2,14 @@ package main
 
 import (
 	"fmt"
+	"time"
 )
+
+type Tree struct {
+	Left  *Tree
+	Value int
+	Right *Tree
+}
 
 func showerMain() {
 	ch := make(chan int)
@@ -46,9 +53,20 @@ func fib() chan int {
 	return out
 }
 
+func say(s string) {
+	for i := 0; i < 5; i++ {
+		time.Sleep(100 * time.Millisecond)
+		fmt.Println(s)
+	}
+}
+
 func main() {
 	x := fib()
 	for i := 0; i < 10; i++ {
 		fmt.Println(<-x)
 	}
+
+	go say("world")
+	say("hello")
+
 }
