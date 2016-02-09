@@ -2,8 +2,11 @@ package main
 
 import (
 	"bufio"
+	// "errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 )
@@ -41,6 +44,18 @@ func main() {
 		return
 	}
 	fmt.Println("output is : %s ", string(buf1))
+
+	r1, err := http.Get("http://www.google.com/robots.txt")
+	if err != nil {
+		fmt.Printf("%s\n", err.Error())
+		return
+	}
+	b, err := ioutil.ReadAll(r1.Body)
+	r1.Body.Close()
+	if err == nil {
+		fmt.Printf("%s", string(b))
+	}
+
 	return
 
 	buf := make([]byte, 1024)
