@@ -18,7 +18,7 @@ func shower(ch chan int) {
 	}
 }
 
-func dup3(in <-chan int) (<-chan int, <-chan int, <-chan int) {
+func dup3(in chan int) (chan int, chan int, chan int) {
 
 	a, b, c := make(chan int, 2), make(chan int, 2), make(chan int, 2)
 	go func() {
@@ -32,7 +32,7 @@ func dup3(in <-chan int) (<-chan int, <-chan int, <-chan int) {
 	return a, b, c
 }
 
-func fib() <-chan int {
+func fib() chan int {
 	x := make(chan int, 2)
 	a, b, out := dup3(x)
 	go func() {
