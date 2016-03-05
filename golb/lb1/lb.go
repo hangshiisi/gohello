@@ -1,5 +1,11 @@
 package main
 
+import (
+	"time"
+)
+
+var NumWorkers int = 10
+
 type Work struct {
 	x, y, z int
 }
