@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-var NumWorkers int = 10
+var NumWorkers int = 5
 
 type Work struct {
 	x, y, z int
@@ -31,26 +31,26 @@ func sendLotsOfWork(in chan<- Work) {
 		w.z = 0
 		in <- w
 	}
+	close(in)
 
 }
 
 func receiveLotsOfResults(out <-chan Work) {
 	fmt.Println("Receive, World")
-	for w := range out {
+	for i := 1; i <= 5; i++ {
+		w := <-out
 		fmt.Println("Get Result %d ", w.z)
 	}
-
 }
 
 func Run() {
 	in, out := make(chan Work), make(chan Work)
-	//for i := 0; i < NumWorkers; i++ {
-	go worker(in, out)
-	//}
+	for i := 0; i < NumWorkers; i++ {
+		go worker(in, out)
+	}
 	go sendLotsOfWork(in)
 	receiveLotsOfResults(out)
 	close(out)
-	close(in)
 }
 
 func main() {
