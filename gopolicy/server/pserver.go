@@ -9,6 +9,7 @@ package main
 
 import (
 	"bufio"
+	"container/heap"
 	"fmt"
 	"log"
 	"math/rand"
@@ -19,7 +20,7 @@ import (
 //=========================================================
 //========================================================
 var (
-	nWorker int = 4
+	nWorker int64 = 4
 	Second  int = 4
 )
 
@@ -28,11 +29,19 @@ type Request struct {
 	c  chan int   // The channel to return the result.
 }
 
+func workFn() int { 
+	return 100
+} 
+
+func furtherProcess(c int) int { 
+	return 200
+} 
+
 func requester(work chan<- Request) {
 	c := make(chan int)
 	for {
 		// Kill some time (fake load).
-		time.Sleep(rand.Int63n(nWorker * 2 * Second))
+		time.Sleep(time.Duration(rand.Int63n(nWorker * 2)) * time.Second)
 		work <- Request{workFn, c} // send request
 		result := <-c              // wait for answer
 		furtherProcess(result)
@@ -73,6 +82,23 @@ func (b *Balancer) balance(work chan Request) {
 
 func (p Pool) Less(i, j int) bool {
 	return p[i].pending < p[j].pending
+}
+
+func (h Pool) Len() int           { return len(h) }
+func (h Pool) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+
+func (h *Pool) Push(x interface{}) {
+        // Push and Pop use pointer receivers because they modify the slice's length,
+        // not just its contents.
+        *h = append(*h, x.(*Worker))
+}
+
+func (h *Pool) Pop() interface{} {
+        old := *h
+        n := len(old)
+        x := old[n-1]
+        *h = old[0 : n-1]
+        return x
 }
 
 // Send Request to worker
