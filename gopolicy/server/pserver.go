@@ -18,7 +18,10 @@ import (
 
 //=========================================================
 //========================================================
-var nWorker :=4 int 
+var (
+	nWorker int = 4
+	Second  int = 4
+)
 
 type Request struct {
 	fn func() int // The operation to perform.
