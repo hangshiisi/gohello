@@ -19,29 +19,32 @@ import (
 
 //=========================================================
 //========================================================
-var (
-	nWorker int64 = 4
-	Second  int = 4
-)
 
 type Request struct {
 	fn func() int // The operation to perform.
 	c  chan int   // The channel to return the result.
 }
 
-func workFn() int { 
-	return 100
-} 
+var (
+	nWorker  int64 = 4
+	workChan       = make(chan Request)
+)
 
-func furtherProcess(c int) int { 
+func workFn() int {
+	fmt.Println("inside function workFn \n")
+	return 100
+}
+
+func furtherProcess(c int) int {
+	fmt.Println("inside function furtherProcess \n")
 	return 200
-} 
+}
 
 func requester(work chan<- Request) {
 	c := make(chan int)
 	for {
 		// Kill some time (fake load).
-		time.Sleep(time.Duration(rand.Int63n(nWorker * 2)) * time.Second)
+		time.Sleep(time.Duration(rand.Int63n(nWorker*2)) * time.Second)
 		work <- Request{workFn, c} // send request
 		result := <-c              // wait for answer
 		furtherProcess(result)
@@ -50,8 +53,9 @@ func requester(work chan<- Request) {
 
 type Worker struct {
 	requests chan Request // work to do (buffered channel)
-	pending  int          // count of pending tasks
-	index    int          // index in the heap
+	id       string
+	pending  int // count of pending tasks
+	index    int // index in the heap
 }
 
 func (w *Worker) work(done chan *Worker) {
@@ -84,21 +88,36 @@ func (p Pool) Less(i, j int) bool {
 	return p[i].pending < p[j].pending
 }
 
-func (h Pool) Len() int           { return len(h) }
-func (h Pool) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+func (h Pool) Len() int { return len(h) }
+
+func (h Pool) Swap(i, j int) {
+	h[i], h[j] = h[j], h[i]
+	h[i].index = i
+	h[j].index = j
+}
 
 func (h *Pool) Push(x interface{}) {
-        // Push and Pop use pointer receivers because they modify the slice's length,
-        // not just its contents.
-        *h = append(*h, x.(*Worker))
+	// Push and Pop use pointer receivers because they modify the slice's length,
+	// not just its contents.
+	n := len(*h)
+	item := x.(*Worker)
+	item.index = n
+	*h = append(*h, item)
+
 }
 
 func (h *Pool) Pop() interface{} {
-        old := *h
-        n := len(old)
-        x := old[n-1]
-        *h = old[0 : n-1]
-        return x
+	old := *h
+	n := len(old)
+	x := old[n-1]
+	x.index = -1
+	*h = old[0 : n-1]
+	return x
+}
+
+func (h *Pool) update(item *Worker, pending int) {
+	item.pending = pending
+	heap.Fix(h, item.index)
 }
 
 // Send Request to worker
@@ -121,6 +140,48 @@ func (b *Balancer) completed(w *Worker) {
 	heap.Remove(&b.pool, w.index)
 	// Put it into its place on the heap.
 	heap.Push(&b.pool, w)
+}
+
+func main() {
+	fmt.Println("Hello World.\n")
+
+	// Some items and their priorities.
+	//items := map[chan Request]int{
+	// 		make(chan Request): 3, make(chan Request): 2,
+	//		make(chan Request): 4,
+	//	}
+	items := map[string]int{
+		"banana": 3, "apple": 2, "pear": 4,
+	}
+
+	// Create a priority queue, put the items in it, and
+	// establish the priority queue (heap) invariants.
+	pq := make(Pool, len(items))
+	i := 0
+	for value, pending := range items {
+		pq[i] = &Worker{
+			id:      value,
+			pending: pending,
+			index:   i,
+		}
+		i++
+	}
+	heap.Init(&pq)
+
+	// Insert a new item and then modify its priority.
+	item := &Worker{
+		requests: make(chan Request),
+		pending:  1,
+		id:       "Kiwi",
+	}
+	heap.Push(&pq, item)
+	pq.update(item, 5)
+
+	// Take the items out; they arrive in decreasing priority order.
+	for pq.Len() > 0 {
+		item := heap.Pop(&pq).(*Worker)
+		fmt.Printf("%.2d:%s \n", item.pending, item.id)
+	}
 }
 
 //=========================================================
@@ -190,7 +251,7 @@ func clientWriter(conn net.Conn, ch <-chan string) {
 //!-handleConn
 
 //!+main
-func main() {
+func netMain() {
 	listener, err := net.Listen("tcp", "localhost:8000")
 	if err != nil {
 		log.Fatal(err)
