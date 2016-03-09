@@ -13,11 +13,11 @@ type Work struct {
 	x, y, z, k int
 }
 
-func worker(in <-chan Work, out chan<- Work) {
+func worker(myWorkerID int, in <-chan Work, out chan<- Work) {
 	for w := range in {
                 //simulating the load 
 		w.k = rand.Intn(NumWorkers*2) 
-		fmt.Printf("Doing the work for %d sleep %d\n", w.x, w.k)
+		fmt.Printf("I'm %d job %d sleep %d\n", myWorkerID, w.x, w.k)
 		time.Sleep(time.Duration(w.k) * time.Second)
 		w.z = w.x * w.y
 		out <- w
@@ -45,7 +45,7 @@ func receiveLotsOfResults(out <-chan Work) {
 func Run() {
 	in, out := make(chan Work), make(chan Work)
 	for i := 0; i < NumWorkers; i++ {
-		go worker(in, out)
+		go worker(i, in, out)
 	}
 	go sendLotsOfWork(in)
 	go receiveLotsOfResults(out)
