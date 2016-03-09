@@ -18,18 +18,34 @@ import (
 //========================================================
 
 type Request struct {
-	fn func() int // The operation to perform.
+	fn func(w *Worker) int // The operation to perform.
 	c  chan int   // The channel to return the result.
 }
 
+type Worker struct {
+	requests chan Request // work to do (buffered channel)
+	id       int //id of the worker 
+	desc     string //description of the worker 
+	pending  int // count of pending tasks
+	index    int // index in the heap
+}
+
+type Pool []*Worker // used to build priority queue of workers 
+
+type Balancer struct {
+	pool Pool
+	done chan *Worker
+}
+
 var (
-	nWorker	int64 = 4
+	nWorker	int = 6
 	nJobs	int = 10
 	workChan       = make(chan Request)
 )
 
-func workFn() int {
-	fmt.Println("inside function workFn \n")
+func workFn(w *Worker) int {
+	fmt.Println("Doing work inside function workFn ")
+	time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
 	return 100
 }
 
@@ -38,10 +54,11 @@ func furtherProcess(c int) int {
 	return 200
 }
 
+// API to send requesters 
 func requester(work chan<- Request) {
 	for i := 1; i < nJobs ; i++ {
-		// simulate the load
-		time.Sleep(time.Duration(rand.Int63n(nWorker*2)) * time.Second)
+		// simulate the interval between job requests 
+		time.Sleep(time.Duration(rand.Intn(nWorker*2)) * time.Second)
 		c := make(chan int)
 		work <- Request{workFn, c} // send request
 		result := <-c              // wait for answer
@@ -50,38 +67,14 @@ func requester(work chan<- Request) {
 	}
 }
 
-type Worker struct {
-	requests chan Request // work to do (buffered channel)
-	id       string
-	pending  int // count of pending tasks
-	index    int // index in the heap
-}
-
-func (w *Worker) work(done chan *Worker) {
+func doTheWork(w *Worker, b *Balancer) {
 	for req := range w.requests { // get Request from balancer
-		req.c <- req.fn()   // call fn and send result
-		done <- w           // we've finished this request
+		req.c <- req.fn(w)   // call fn and send result
+		b.done <- w           // we've finished this request
 	}
 }
 
-type Pool []*Worker
-
-type Balancer struct {
-	pool Pool
-	done chan *Worker
-}
-
-func (b *Balancer) balance(work chan Request) {
-	for {
-		select {
-		case req := <-work: // received a Request...
-			b.dispatch(req) // ...so send it to a Worker
-		case w := <-b.done: // a worker has finished ...
-			b.completed(w) // ...so update its info
-		}
-	}
-}
-
+//Priority Queue Implementation 
 func (p Pool) Less(i, j int) bool {
 	return p[i].pending < p[j].pending
 }
@@ -118,7 +111,19 @@ func (h *Pool) update(item *Worker, pending int) {
 	heap.Fix(h, item.index)
 }
 
-// Send Request to worker
+func (b *Balancer) balance(work chan Request) {
+	for {
+		select {
+		case req := <-work: // received a Request...
+			b.dispatch(req) // ...so send it to a Worker
+		case w := <-b.done: // a worker has finished ...
+			b.completed(w) // ...so update its info
+		}
+	}
+}
+
+// Dispatch Request to worker based on various policy 
+
 func (b *Balancer) dispatch(req Request) {
 	// Grab the least loaded worker...
 	w := heap.Pop(&b.pool).(*Worker)
@@ -141,45 +146,31 @@ func (b *Balancer) completed(w *Worker) {
 }
 
 func runPolicyManager() {
-	fmt.Println("Hello World.\n")
+	fmt.Println("Policy Manager Demo Started.\n")
 
-	// Some items and their priorities.
-	//items := map[chan Request]int{
-	// 		make(chan Request): 3, make(chan Request): 2,
-	//		make(chan Request): 4,
-	//	}
-	items := map[string]int{
-		"banana": 3, "apple": 2, "pear": 4,
+	//worker id and strings 
+	items := map[int]string{
+		3:"banana", 2:"apple", 4:"pear",
+                10:"kiwi", 11:"melon", 12:"orange", 
 	}
 
 	// Create a priority queue, put the items in it, and
 	// establish the priority queue (heap) invariants.
 	pq := make(Pool, len(items))
 	i := 0
-	for value, pending := range items {
+	for value, desc := range items {
 		pq[i] = &Worker{
-			id:      value,
-			pending: pending,
+			id: value,
+			desc:desc, 
+			pending: 0,
 			index:   i,
+			requests: make(chan Request), 
 		}
 		i++
 	}
 	heap.Init(&pq)
 
-	// Insert a new item and then modify its priority.
-	item := &Worker{
-		requests: make(chan Request),
-		pending:  1,
-		id:       "Kiwi",
-	}
-	heap.Push(&pq, item)
-	pq.update(item, 5)
 
-	// Take the items out; they arrive in decreasing priority order.
-	for pq.Len() > 0 {
-		item := heap.Pop(&pq).(*Worker)
-		fmt.Printf("%.2d:%s \n", item.pending, item.id)
-	}
 }
 
 func testPQ() {
@@ -200,7 +191,8 @@ func testPQ() {
 	i := 0
 	for value, pending := range items {
 		pq[i] = &Worker{
-			id:      value,
+			id: i, 
+			desc:      value,
 			pending: pending,
 			index:   i,
 		}
@@ -212,7 +204,8 @@ func testPQ() {
 	item := &Worker{
 		requests: make(chan Request),
 		pending:  1,
-		id:       "Kiwi",
+		desc:       "Kiwi",
+		id: 100, 
 	}
 	heap.Push(&pq, item)
 	pq.update(item, 5)
