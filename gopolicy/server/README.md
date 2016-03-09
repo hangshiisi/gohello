@@ -10,4 +10,14 @@
 4. doneChan:   
 	a channel inside Load Balancer to enqueue/dequeue done messages 
 
-5. 
+5. allDoneChan: 
+	to indicate all work has been completed 
+
+Flow
+	create worker states/priority queue
+	create policy manager 
+	start the worker goroutine (N) 
+	start policy manager goroutine (1) 
+	start the API request goroutine (1 for now) 
+	wait for all done sigal 
+

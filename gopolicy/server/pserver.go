@@ -40,7 +40,8 @@ type Balancer struct {
 var (
 	nWorker	int = 6
 	nJobs	int = 10
-	workChan       = make(chan Request)
+	workChan	= make(chan Request)
+	allDoneChan	= make(chan int) 	
 )
 
 func workFn(w *Worker) int {
@@ -59,6 +60,7 @@ func requester(work chan<- Request) {
 	for i := 1; i < nJobs ; i++ {
 		// simulate the interval between job requests 
 		time.Sleep(time.Duration(rand.Intn(nWorker*2)) * time.Second)
+		fmt.Printf("send Job request %d \n", i) 
 		c := make(chan int)
 		work <- Request{workFn, c} // send request
 		result := <-c              // wait for answer
@@ -111,7 +113,7 @@ func (h *Pool) update(item *Worker, pending int) {
 	heap.Fix(h, item.index)
 }
 
-func (b *Balancer) balance(work chan Request) {
+func policyScheduler(b *Balancer, work <-chan Request) {
 	for {
 		select {
 		case req := <-work: // received a Request...
@@ -170,7 +172,25 @@ func runPolicyManager() {
 	}
 	heap.Init(&pq)
 
+	//create policy manager 
+	pm := &Balancer{ 
+		pool:pq, 
+		done: make(chan *Worker), 
+		}
+ 
+	//start the worker goroutines 
+	for i := 0; i < len(items); i++ { 
+		go doTheWork(pq[i], pm)
+	} 
 
+	//start the policy scheduler goroutines 
+	go policyScheduler(pm, workChan) 
+
+	//start the requester goroutines 
+	go requester(workChan)  
+
+	//wait for the end signal 	
+	<- allDoneChan 
 }
 
 func testPQ() {
@@ -225,6 +245,7 @@ func testPQ() {
 func main() { 
 	fmt.Println("Hello World")
 	// testPQ()
+	// runPolicyManager()
 } 
 
 
