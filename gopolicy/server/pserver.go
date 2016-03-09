@@ -1,10 +1,8 @@
 // Copyright © 2016 Hang Shi.
 // License: https://creativecommons.org/licenses/by-nc-sa/4.0/
 
-//
-//!+
-
-// Chat is a server that lets clients chat with each other.
+// Policy Manager framework 
+ 
 package main
 
 import (
@@ -33,19 +31,21 @@ type Worker struct {
 type Pool []*Worker // used to build priority queue of workers 
 
 type Balancer struct {
-	pool Pool
-	done chan *Worker
+	pool Pool 		// priority queue for workers  
+	done chan *Worker 	// channel for work requests
 }
 
 var (
-	nWorker	int = 6
-	nJobs	int = 10
-	workChan	= make(chan Request)
-	allDoneChan	= make(chan int) 	
+	nWorker	int = 6		// number of workers 
+	nJobs	int = 3	// how many job requests to start 
+	workChan	= make(chan Request)	// job request queue  
+	allDoneChan	= make(chan int) 	// signal job completion 	
 )
 
 func workFn(w *Worker) int {
-	fmt.Println("Doing work inside function workFn ")
+	fmt.Println("Doing work inside function workFn by Worker ")
+	fmt.Printf("\t   Details: id %d desc %s pending %d ", 
+                    w.id, w.desc, w.pending)  
 	time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
 	return 100
 }
@@ -71,7 +71,8 @@ func requester(work chan<- Request) {
 
 func doTheWork(w *Worker, b *Balancer) {
 	for req := range w.requests { // get Request from balancer
-		req.c <- req.fn(w)   // call fn and send result
+		req.c <- req.fn(w)    // call fn and send result
+		fmt.Println("invoking worker functions") 
 		b.done <- w           // we've finished this request
 	}
 }
@@ -133,6 +134,8 @@ func (b *Balancer) dispatch(req Request) {
 	w.requests <- req
 	// One more in its work queue.
 	w.pending++
+	fmt.Printf(" Get the work, assigned to worker %d pending %d \n", 
+			w.id, w.pending) 
 	// Put it into its place on the heap.
 	heap.Push(&b.pool, w)
 }
@@ -141,6 +144,8 @@ func (b *Balancer) dispatch(req Request) {
 func (b *Balancer) completed(w *Worker) {
 	// One fewer in the queue.
 	w.pending--
+	fmt.Printf(" Completed the work, by worker %d pending %d \n", 
+			w.id, w.pending) 
 	// Remove it from heap.
 	heap.Remove(&b.pool, w.index)
 	// Put it into its place on the heap.
@@ -189,6 +194,7 @@ func runPolicyManager() {
 	//start the requester goroutines 
 	go requester(workChan)  
 
+	fmt.Print("wait for the end signal \n") 
 	//wait for the end signal 	
 	<- allDoneChan 
 }
@@ -245,7 +251,7 @@ func testPQ() {
 func main() { 
 	fmt.Println("Hello World")
 	// testPQ()
-	// runPolicyManager()
+	runPolicyManager()
 } 
 
 
