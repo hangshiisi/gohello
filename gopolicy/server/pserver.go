@@ -8,12 +8,9 @@
 package main
 
 import (
-	"bufio"
 	"container/heap"
 	"fmt"
-	"log"
 	"math/rand"
-	"net"
 	"time"
 )
 
@@ -26,7 +23,8 @@ type Request struct {
 }
 
 var (
-	nWorker  int64 = 4
+	nWorker	int64 = 4
+	nJobs	int = 10
 	workChan       = make(chan Request)
 )
 
@@ -41,12 +39,13 @@ func furtherProcess(c int) int {
 }
 
 func requester(work chan<- Request) {
-	c := make(chan int)
-	for {
-		// Kill some time (fake load).
+	for i := 1; i < nJobs ; i++ {
+		// simulate the load
 		time.Sleep(time.Duration(rand.Int63n(nWorker*2)) * time.Second)
+		c := make(chan int)
 		work <- Request{workFn, c} // send request
 		result := <-c              // wait for answer
+		close(c) 
 		furtherProcess(result)
 	}
 }
@@ -59,8 +58,7 @@ type Worker struct {
 }
 
 func (w *Worker) work(done chan *Worker) {
-	for {
-		req := <-w.requests // get Request from balancer
+	for req := range w.requests { // get Request from balancer
 		req.c <- req.fn()   // call fn and send result
 		done <- w           // we've finished this request
 	}
@@ -142,7 +140,7 @@ func (b *Balancer) completed(w *Worker) {
 	heap.Push(&b.pool, w)
 }
 
-func main() {
+func runPolicyManager() {
 	fmt.Println("Hello World.\n")
 
 	// Some items and their priorities.
@@ -184,88 +182,57 @@ func main() {
 	}
 }
 
+func testPQ() {
+	fmt.Println("Hello World.\n")
+
+	// Some items and their priorities.
+	//items := map[chan Request]int{
+	// 		make(chan Request): 3, make(chan Request): 2,
+	//		make(chan Request): 4,
+	//	}
+	items := map[string]int{
+		"banana": 3, "apple": 2, "pear": 4,
+	}
+
+	// Create a priority queue, put the items in it, and
+	// establish the priority queue (heap) invariants.
+	pq := make(Pool, len(items))
+	i := 0
+	for value, pending := range items {
+		pq[i] = &Worker{
+			id:      value,
+			pending: pending,
+			index:   i,
+		}
+		i++
+	}
+	heap.Init(&pq)
+
+	// Insert a new item and then modify its priority.
+	item := &Worker{
+		requests: make(chan Request),
+		pending:  1,
+		id:       "Kiwi",
+	}
+	heap.Push(&pq, item)
+	pq.update(item, 5)
+
+	// Take the items out; they arrive in decreasing priority order.
+	for pq.Len() > 0 {
+		item := heap.Pop(&pq).(*Worker)
+		fmt.Printf("%.2d:%s \n", item.pending, item.id)
+	}
+
+}
+
 //=========================================================
 //========================================================
 //=========================================================
-//========================================================
 
-//!+broadcaster
-type client chan<- string // an outgoing message channel
+func main() { 
+	fmt.Println("Hello World")
+	// testPQ()
+} 
 
-var (
-	entering = make(chan client)
-	leaving  = make(chan client)
-	messages = make(chan string) // all incoming client messages
-)
 
-func broadcaster() {
-	clients := make(map[client]bool) // all connected clients
-	for {
-		select {
-		case msg := <-messages:
-			// Broadcast incoming message to all
-			// clients' outgoing message channels.
-			for cli := range clients {
-				cli <- msg
-			}
 
-		case cli := <-entering:
-			clients[cli] = true
-
-		case cli := <-leaving:
-			delete(clients, cli)
-			close(cli)
-		}
-	}
-}
-
-//!-broadcaster
-
-//!+handleConn
-func handleConn(conn net.Conn) {
-	ch := make(chan string) // outgoing client messages
-	go clientWriter(conn, ch)
-
-	who := conn.RemoteAddr().String()
-	ch <- "You are " + who
-	messages <- who + " has arrived"
-	entering <- ch
-
-	input := bufio.NewScanner(conn)
-	for input.Scan() {
-		messages <- who + ": " + input.Text()
-	}
-	// NOTE: ignoring potential errors from input.Err()
-
-	leaving <- ch
-	messages <- who + " has left"
-	conn.Close()
-}
-
-func clientWriter(conn net.Conn, ch <-chan string) {
-	for msg := range ch {
-		fmt.Fprintln(conn, msg) // NOTE: ignoring network errors
-	}
-}
-
-//!-handleConn
-
-//!+main
-func netMain() {
-	listener, err := net.Listen("tcp", "localhost:8000")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	go broadcaster()
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			log.Print(err)
-			continue
-		}
-		go handleConn(conn)
-	}
-}
-
-//!-main
