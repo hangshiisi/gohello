@@ -3,44 +3,43 @@ package main
 import (
 	"fmt"
 	"time"
+	"math/rand"
 )
 
 var NumWorkers int = 5
+var doneChan = make(chan int) 
 
 type Work struct {
-	x, y, z int
+	x, y, z, k int
 }
 
 func worker(in <-chan Work, out chan<- Work) {
 	for w := range in {
+                //simulating the load 
+		w.k = rand.Intn(NumWorkers*2) 
+		fmt.Printf("Doing the work for %d sleep %d\n", w.x, w.k)
+		time.Sleep(time.Duration(w.k) * time.Second)
 		w.z = w.x * w.y
-		// time.Sleep( w.z * time.Second)
-		fmt.Println("Doing the work for %d ", w.x)
-
-		time.Sleep(5 * time.Second)
 		out <- w
 	}
 }
 
 func sendLotsOfWork(in chan<- Work) {
-	fmt.Println("Send, World")
-	var w Work
+	fmt.Println("Start Goroutine for Job Requests")
 	for i := 1; i <= 5; i++ {
-		w.x = i
-		w.y = i + 1
-		w.z = 0
-		in <- w
+		in <- Work{x:i, y:i+1}  
 	}
 	close(in)
 
 }
 
 func receiveLotsOfResults(out <-chan Work) {
-	fmt.Println("Receive, World")
-	for i := 1; i <= 5; i++ {
+	fmt.Println("Start Goroutine for Result Retrieval")
+	for i := 1; i <= NumWorkers; i++ {
 		w := <-out
-		fmt.Println("Get Result %d ", w.z)
+		fmt.Printf("Get Result %d for request No. %d \n", w.z, w.x)
 	}
+        doneChan <- 100 
 }
 
 func Run() {
@@ -49,7 +48,8 @@ func Run() {
 		go worker(in, out)
 	}
 	go sendLotsOfWork(in)
-	receiveLotsOfResults(out)
+	go receiveLotsOfResults(out)
+        <- doneChan 
 	close(out)
 }
 
