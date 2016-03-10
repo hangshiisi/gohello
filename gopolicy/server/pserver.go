@@ -40,7 +40,7 @@ var (
 	nJobs	int = 30	// how many job requests to start 
 	completedJobs int = 0   // how many jobs have been completed 
 	workChan	= make(chan Request)	// job request queue  
-	allDoneChan	= make(chan int) 	// signal job completion 	
+	allDoneChan	= make(chan int) 	// signal program bcompletion 	
 )
 
 func workFn(w *Worker) int {
@@ -52,13 +52,6 @@ func workFn(w *Worker) int {
 }
 
 func furtherProcess(c int) int {
-	completedJobs++
-	fmt.Printf(" current Job completed is %d \n", completedJobs) 
-	if completedJobs == nJobs   { 
-		fmt.Printf(" all Job completed already \n") 
-		allDoneChan <- 100 // all jobs completed 
-	} 
-
 	return 200
 }
 
@@ -125,18 +118,23 @@ func (h *Pool) update(item *Worker, pending int) {
 }
 
 func policyScheduler(b *Balancer, work <-chan Request) {
-	for {
+	loop: for {
 		select {
-		case req := <-work: // received a Request...
+		case req, ok := <- work: // received a Request...
+			if !ok { 
+				break loop
+			} 
 			b.dispatch(req) // ...so send it to a Worker
-		case w := <-b.done: // a worker has finished ...
+		case w, ok := <-b.done: // a worker has finished ...
+			if !ok { 
+				break loop
+			} 
 			b.completed(w) // ...so update its info
 		}
 	}
 }
 
 // Dispatch Request to worker based on various policy 
-
 func (b *Balancer) dispatch(req Request) {
 	// Grab the least loaded worker...
 	w := heap.Pop(&b.pool).(*Worker)
@@ -161,6 +159,14 @@ func (b *Balancer) completed(w *Worker) {
 
 	// Put it into its place on the heap.
 	heap.Push(&b.pool, w)
+
+	completedJobs++
+	fmt.Printf(" current Job completed is %d \n", completedJobs) 
+	if completedJobs == nJobs   { 
+		fmt.Printf(" ALL Job completed already \n") 
+		allDoneChan <- 100 // all jobs completed 
+	} 
+
 
 }
 
@@ -209,7 +215,6 @@ func runPolicyManager() {
 	fmt.Print("wait for the end signal \n") 
 	//wait for the end signal 	
 	<- allDoneChan 
-	close(pm.done) 
 	close(allDoneChan)
 	close(workChan)
 	//start the worker goroutines 
@@ -217,6 +222,7 @@ func runPolicyManager() {
 		fmt.Printf("Close channel request %d \n", i) 
 		close(pq[i].requests)
 	} 
+	close(pm.done) 
 }
 
 func testPQ() {
