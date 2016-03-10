@@ -8,8 +8,8 @@ package main
 import (
 	"container/heap"
 	"fmt"
-	"math/rand"
-	"time"
+//	"math/rand"
+//	"time"
 )
 
 //=========================================================
@@ -37,29 +37,36 @@ type Balancer struct {
 
 var (
 	nWorker	int = 6		// number of workers 
-	nJobs	int = 3	// how many job requests to start 
+	nJobs	int = 30	// how many job requests to start 
+	completedJobs int = 0   // how many jobs have been completed 
 	workChan	= make(chan Request)	// job request queue  
 	allDoneChan	= make(chan int) 	// signal job completion 	
 )
 
 func workFn(w *Worker) int {
 	fmt.Println("Doing work inside function workFn by Worker ")
-	fmt.Printf("\t   Details: id %d desc %s pending %d ", 
+	fmt.Printf("\t   Details: id %d desc %s pending %d \n", 
                     w.id, w.desc, w.pending)  
-	time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
+	// time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
 	return 100
 }
 
 func furtherProcess(c int) int {
-	fmt.Println("inside function furtherProcess \n")
+	completedJobs++
+	fmt.Printf(" current Job completed is %d \n", completedJobs) 
+	if completedJobs == nJobs   { 
+		fmt.Printf(" all Job completed already \n") 
+		allDoneChan <- 100 // all jobs completed 
+	} 
+
 	return 200
 }
 
 // API to send requesters 
 func requester(work chan<- Request) {
-	for i := 1; i < nJobs ; i++ {
+	for i := 0; i < nJobs ; i++ {
 		// simulate the interval between job requests 
-		time.Sleep(time.Duration(rand.Intn(nWorker*2)) * time.Second)
+		// time.Sleep(time.Duration(rand.Intn(nWorker*2)) * time.Second)
 		fmt.Printf("send Job request %d \n", i) 
 		c := make(chan int)
 		work <- Request{workFn, c} // send request
@@ -67,6 +74,7 @@ func requester(work chan<- Request) {
 		close(c) 
 		furtherProcess(result)
 	}
+	fmt.Printf("Exitting requester \n") 
 }
 
 func doTheWork(w *Worker, b *Balancer) {
@@ -75,6 +83,8 @@ func doTheWork(w *Worker, b *Balancer) {
 		fmt.Println("invoking worker functions") 
 		b.done <- w           // we've finished this request
 	}
+	fmt.Printf("Exitting Worker \n") 
+	
 }
 
 //Priority Queue Implementation 
@@ -148,8 +158,10 @@ func (b *Balancer) completed(w *Worker) {
 			w.id, w.pending) 
 	// Remove it from heap.
 	heap.Remove(&b.pool, w.index)
+
 	// Put it into its place on the heap.
 	heap.Push(&b.pool, w)
+
 }
 
 func runPolicyManager() {
@@ -197,16 +209,19 @@ func runPolicyManager() {
 	fmt.Print("wait for the end signal \n") 
 	//wait for the end signal 	
 	<- allDoneChan 
+	close(pm.done) 
+	close(allDoneChan)
+	close(workChan)
+	//start the worker goroutines 
+	for i := 0; i < len(items); i++ { 
+		fmt.Printf("Close channel request %d \n", i) 
+		close(pq[i].requests)
+	} 
 }
 
 func testPQ() {
 	fmt.Println("Hello World.\n")
 
-	// Some items and their priorities.
-	//items := map[chan Request]int{
-	// 		make(chan Request): 3, make(chan Request): 2,
-	//		make(chan Request): 4,
-	//	}
 	items := map[string]int{
 		"banana": 3, "apple": 2, "pear": 4,
 	}
