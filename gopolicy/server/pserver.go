@@ -8,6 +8,7 @@ package main
 import (
 	"container/heap"
 	"fmt"
+	"os" 
 //	"math/rand"
 //	"time"
 )
@@ -162,11 +163,12 @@ func (b *Balancer) completed(w *Worker) {
 
 	completedJobs++
 	fmt.Printf(" current Job completed is %d \n", completedJobs) 
-	if completedJobs == nJobs   { 
-		fmt.Printf(" ALL Job completed already \n") 
-		allDoneChan <- 100 // all jobs completed 
-	} 
 
+        
+	//if completedJobs == nJobs   { 
+	//	fmt.Printf(" ALL Job completed already \n") 
+ 	//		allDoneChan <- 100 // all jobs completed 
+	//} 
 
 }
 
@@ -272,6 +274,10 @@ func testPQ() {
 func main() { 
 	fmt.Println("Hello World")
 	// testPQ()
+	go func() { 
+		os.Stdin.Read(make([]byte,1)) 
+		allDoneChan <- 100
+	} () 	
 	runPolicyManager()
 } 
 
