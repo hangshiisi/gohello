@@ -1,16 +1,16 @@
 // Copyright © 2016 Hang Shi.
 // License: https://creativecommons.org/licenses/by-nc-sa/4.0/
 
-// Policy Manager framework 
- 
+// Policy Manager framework
+
 package main
 
 import (
 	"container/heap"
 	"fmt"
-	"os" 
-//	"math/rand"
-//	"time"
+	"os"
+	//	"math/rand"
+	//	"time"
 )
 
 //=========================================================
@@ -18,36 +18,36 @@ import (
 
 type Request struct {
 	fn func(w *Worker) int // The operation to perform.
-	c  chan int   // The channel to return the result.
+	c  chan int            // The channel to return the result.
 }
 
 type Worker struct {
 	requests chan Request // work to do (buffered channel)
-	id       int //id of the worker 
-	desc     string //description of the worker 
-	pending  int // count of pending tasks
-	index    int // index in the heap
+	id       int          //id of the worker
+	desc     string       //description of the worker
+	pending  int          // count of pending tasks
+	index    int          // index in the heap
 }
 
-type Pool []*Worker // used to build priority queue of workers 
+type Pool []*Worker // used to build priority queue of workers
 
 type Balancer struct {
-	pool Pool 		// priority queue for workers  
-	done chan *Worker 	// channel for work requests
+	pool Pool         // priority queue for workers
+	done chan *Worker // channel for work requests
 }
 
 var (
-	nWorker	int = 6		// number of workers 
-	nJobs	int = 30	// how many job requests to start 
-	completedJobs int = 0   // how many jobs have been completed 
-	workChan	= make(chan Request)	// job request queue  
-	allDoneChan	= make(chan int) 	// signal program bcompletion 	
+	nWorker       int = 6                  // number of workers
+	nJobs         int = 30                 // how many job requests to start
+	completedJobs int = 0                  // how many jobs have been completed
+	workChan          = make(chan Request) // job request queue
+	allDoneChan       = make(chan int)     // signal program bcompletion
 )
 
 func workFn(w *Worker) int {
 	fmt.Println("Doing work inside function workFn by Worker ")
-	fmt.Printf("\t   Details: id %d desc %s pending %d \n", 
-                    w.id, w.desc, w.pending)  
+	fmt.Printf("\t   Details: id %d desc %s pending %d \n",
+		w.id, w.desc, w.pending)
 	// time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
 	return 100
 }
@@ -56,32 +56,32 @@ func furtherProcess(c int) int {
 	return 200
 }
 
-// API to send requesters 
+// API to send requesters
 func requester(work chan<- Request) {
-	for i := 0; i < nJobs ; i++ {
-		// simulate the interval between job requests 
+	for i := 0; i < nJobs; i++ {
+		// simulate the interval between job requests
 		// time.Sleep(time.Duration(rand.Intn(nWorker*2)) * time.Second)
-		fmt.Printf("send Job request %d \n", i) 
+		fmt.Printf("send Job request %d \n", i)
 		c := make(chan int)
 		work <- Request{workFn, c} // send request
 		result := <-c              // wait for answer
-		close(c) 
+		close(c)
 		furtherProcess(result)
 	}
-	fmt.Printf("Exitting requester \n") 
+	fmt.Printf("Exitting requester \n")
 }
 
 func doTheWork(w *Worker, b *Balancer) {
 	for req := range w.requests { // get Request from balancer
-		req.c <- req.fn(w)    // call fn and send result
-		fmt.Println("invoking worker functions") 
-		b.done <- w           // we've finished this request
+		req.c <- req.fn(w) // call fn and send result
+		fmt.Println("invoking worker functions")
+		b.done <- w // we've finished this request
 	}
-	fmt.Printf("Exitting Worker \n") 
-	
+	fmt.Printf("Exitting Worker \n")
+
 }
 
-//Priority Queue Implementation 
+//Priority Queue Implementation
 func (p Pool) Less(i, j int) bool {
 	return p[i].pending < p[j].pending
 }
@@ -119,23 +119,24 @@ func (h *Pool) update(item *Worker, pending int) {
 }
 
 func policyScheduler(b *Balancer, work <-chan Request) {
-	loop: for {
+loop:
+	for {
 		select {
-		case req, ok := <- work: // received a Request...
-			if !ok { 
+		case req, ok := <-work: // received a Request...
+			if !ok {
 				break loop
-			} 
+			}
 			b.dispatch(req) // ...so send it to a Worker
 		case w, ok := <-b.done: // a worker has finished ...
-			if !ok { 
+			if !ok {
 				break loop
-			} 
+			}
 			b.completed(w) // ...so update its info
 		}
 	}
 }
 
-// Dispatch Request to worker based on various policy 
+// Dispatch Request to worker based on various policy
 func (b *Balancer) dispatch(req Request) {
 	// Grab the least loaded worker...
 	w := heap.Pop(&b.pool).(*Worker)
@@ -143,8 +144,8 @@ func (b *Balancer) dispatch(req Request) {
 	w.requests <- req
 	// One more in its work queue.
 	w.pending++
-	fmt.Printf(" Get the work, assigned to worker %d pending %d \n", 
-			w.id, w.pending) 
+	fmt.Printf(" Get the work, assigned to worker %d pending %d \n",
+		w.id, w.pending)
 	// Put it into its place on the heap.
 	heap.Push(&b.pool, w)
 }
@@ -153,8 +154,8 @@ func (b *Balancer) dispatch(req Request) {
 func (b *Balancer) completed(w *Worker) {
 	// One fewer in the queue.
 	w.pending--
-	fmt.Printf(" Completed the work, by worker %d pending %d \n", 
-			w.id, w.pending) 
+	fmt.Printf(" Completed the work, by worker %d pending %d \n",
+		w.id, w.pending)
 	// Remove it from heap.
 	heap.Remove(&b.pool, w.index)
 
@@ -162,23 +163,22 @@ func (b *Balancer) completed(w *Worker) {
 	heap.Push(&b.pool, w)
 
 	completedJobs++
-	fmt.Printf(" current Job completed is %d \n", completedJobs) 
+	fmt.Printf(" current Job completed is %d \n", completedJobs)
 
-        
-	//if completedJobs == nJobs   { 
-	//	fmt.Printf(" ALL Job completed already \n") 
- 	//		allDoneChan <- 100 // all jobs completed 
-	//} 
+	//if completedJobs == nJobs   {
+	//	fmt.Printf(" ALL Job completed already \n")
+	//		allDoneChan <- 100 // all jobs completed
+	//}
 
 }
 
 func runPolicyManager() {
 	fmt.Println("Policy Manager Demo Started.\n")
 
-	//worker id and strings 
+	//worker id and strings
 	items := map[int]string{
-		3:"banana", 2:"apple", 4:"pear",
-                10:"kiwi", 11:"melon", 12:"orange", 
+		3: "banana", 2: "apple", 4: "pear",
+		10: "kiwi", 11: "melon", 12: "orange",
 	}
 
 	// Create a priority queue, put the items in it, and
@@ -187,44 +187,44 @@ func runPolicyManager() {
 	i := 0
 	for value, desc := range items {
 		pq[i] = &Worker{
-			id: value,
-			desc:desc, 
-			pending: 0,
-			index:   i,
-			requests: make(chan Request), 
+			id:       value,
+			desc:     desc,
+			pending:  0,
+			index:    i,
+			requests: make(chan Request),
 		}
 		i++
 	}
 	heap.Init(&pq)
 
-	//create policy manager 
-	pm := &Balancer{ 
-		pool:pq, 
-		done: make(chan *Worker), 
-		}
- 
-	//start the worker goroutines 
-	for i := 0; i < len(items); i++ { 
+	//create policy manager
+	pm := &Balancer{
+		pool: pq,
+		done: make(chan *Worker),
+	}
+
+	//start the worker goroutines
+	for i := 0; i < len(items); i++ {
 		go doTheWork(pq[i], pm)
-	} 
+	}
 
-	//start the policy scheduler goroutines 
-	go policyScheduler(pm, workChan) 
+	//start the policy scheduler goroutines
+	go policyScheduler(pm, workChan)
 
-	//start the requester goroutines 
-	go requester(workChan)  
+	//start the requester goroutines
+	go requester(workChan)
 
-	fmt.Print("wait for the end signal \n") 
-	//wait for the end signal 	
-	<- allDoneChan 
+	fmt.Print("wait for the end signal \n")
+	//wait for the end signal
+	<-allDoneChan
 	close(allDoneChan)
 	close(workChan)
-	//start the worker goroutines 
-	for i := 0; i < len(items); i++ { 
-		fmt.Printf("Close channel request %d \n", i) 
+	//start the worker goroutines
+	for i := 0; i < len(items); i++ {
+		fmt.Printf("Close channel request %d \n", i)
 		close(pq[i].requests)
-	} 
-	close(pm.done) 
+	}
+	close(pm.done)
 }
 
 func testPQ() {
@@ -240,8 +240,8 @@ func testPQ() {
 	i := 0
 	for value, pending := range items {
 		pq[i] = &Worker{
-			id: i, 
-			desc:      value,
+			id:      i,
+			desc:    value,
 			pending: pending,
 			index:   i,
 		}
@@ -253,8 +253,8 @@ func testPQ() {
 	item := &Worker{
 		requests: make(chan Request),
 		pending:  1,
-		desc:       "Kiwi",
-		id: 100, 
+		desc:     "Kiwi",
+		id:       100,
 	}
 	heap.Push(&pq, item)
 	pq.update(item, 5)
@@ -271,15 +271,12 @@ func testPQ() {
 //========================================================
 //=========================================================
 
-func main() { 
+func main() {
 	fmt.Println("Hello World")
 	// testPQ()
-	go func() { 
-		os.Stdin.Read(make([]byte,1)) 
+	go func() {
+		os.Stdin.Read(make([]byte, 1))
 		allDoneChan <- 100
-	} () 	
+	}()
 	runPolicyManager()
-} 
-
-
-
+}
