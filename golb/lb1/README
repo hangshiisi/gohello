@@ -1,0 +1,6 @@
+1. start worker goroutines 
+2. start requester goroutines 
+3. start resultReiver goroutines 
+
+use done channel to communicate the completeness of job 
+
