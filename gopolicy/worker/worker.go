@@ -115,7 +115,7 @@ func RunPolicyAgent() {
 	
 }
 
-func main() {
+func ownMain() {
 	RunPolicyAgent()
 }
 
