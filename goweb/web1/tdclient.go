@@ -18,13 +18,13 @@ func main() {
 
 	r, err := cli.ContainerCreate(context.Background(),
 		&container.Config{
-                        Image: "ubuntu", Hostname: "",
+			Image: "ubuntu", Hostname: "",
 			User:         "",
 			AttachStdin:  true,
 			AttachStdout: true,
 			AttachStderr: true,
 			Tty:          true,
-			Cmd: []string{"/bin/bash"}, 
+			Cmd:          []string{"/bin/bash"},
 			OpenStdin:    false,
 			StdinOnce:    true,
 			WorkingDir:   ""}, nil, nil, "MyName6")
