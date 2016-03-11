@@ -48,7 +48,6 @@ func secondMain() {
 
 }
 
-func main() { 
+func main() {
 	secondMain()
-} 
-
+}
