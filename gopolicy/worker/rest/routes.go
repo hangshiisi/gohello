@@ -13,6 +13,12 @@ type Routes []Route
 
 var routes = Routes{
 	Route{
+		"ContainerCreate",
+		"POST",
+		"/containers",
+		ContainerCreate,
+	},
+	Route{
 		"Index",
 		"GET",
 		"/",
