@@ -33,7 +33,7 @@ type PAMessage struct {
 //              work requests will be sent from policy manager and REST
 //		server will receive these requests via JSON format and create
 // 		PAMessages and send them to the request listener goroutine
-// 		via inWorkChan. Listener goroutine will then create goroutine
+// 		via inWorkChan. Listener goroutine will then create a goroutine
 //		to do the work for each request; when the work is done, that 
 //		goroutine will post the reply to outResultChan. 
 //      * system flow for replies 

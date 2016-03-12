@@ -8,7 +8,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-func main() {
+func runContainer() { 
 	defaultHeaders := map[string]string{"User-Agent": "engine-api-cli-1.0"}
 
 	cli, err := client.NewClient("unix:///var/run/docker.sock", "v1.21", nil, defaultHeaders)
@@ -27,7 +27,7 @@ func main() {
 			Cmd:          []string{"/bin/bash"},
 			OpenStdin:    false,
 			StdinOnce:    true,
-			WorkingDir:   ""}, nil, nil, "MyName6")
+			WorkingDir:   ""}, nil, nil, "")
 	if err != nil {
 		panic(err)
 	}
@@ -37,15 +37,27 @@ func main() {
 		fmt.Println(r)
 		fmt.Println()
 		fmt.Println()
-		fmt.Println()
-		fmt.Println()
-		fmt.Println()
 	}
 
 	err = cli.ContainerStart(context.Background(), r.ID)
 	if err != nil {
 		panic(err)
 	}
+
+
+} 
+
+func main() {
+	
+	runContainer() 
+
+	defaultHeaders := map[string]string{"User-Agent": "engine-api-cli-1.0"}
+
+	cli, err := client.NewClient("unix:///var/run/docker.sock", "v1.21", nil, defaultHeaders)
+	if err != nil {
+		panic(err)
+	}
+
 	options := types.ContainerListOptions{All: true}
 	containers, err := cli.ContainerList(context.Background(), options)
 	if err != nil {
