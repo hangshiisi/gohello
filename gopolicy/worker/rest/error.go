@@ -1,4 +1,4 @@
-package main
+package rest
 
 type jsonErr struct {
 	Code int    `json:"code"`
