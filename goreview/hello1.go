@@ -94,13 +94,65 @@ func reviewSlice() {
 	a6 := a[2:4:5] // slice with elements from index
 	fmt.Printf("a6 %v \n", a6)
 
+	// to extend slice, use append and copy
+	s0 := []int{0, 0}
+	fmt.Printf("slice append and copy %v \n", s0)
+
+	s1 := append(s0, 2)
+	fmt.Printf("s1 %v \n", s1)
+
+	s2 := append(s1, 3, 5, 7)
+	fmt.Printf("s2 %v \n", s2)
+
+	s3 := append(s2, s0...)
+	// s3 := append(s2, s0), cannot use s0 as type int in append
+
+	fmt.Printf("s3 %v \n", s3)
+
+	// slice copy
+	var aa = [...]int{0, 1, 2, 3, 4, 5, 6, 7}
+	var ss = make([]int, 6)
+	fmt.Printf("ss and aa original %v AND %v \n", aa, ss)
+	n1 := copy(ss, aa[0:])
+	fmt.Printf("ss now is %v copied %d \n", ss, n1)
+	n2 := copy(ss, ss[2:])
+	fmt.Printf("ss now is %v copied %d \n", ss, n2)
+
+}
+
+func reviewMap() {
+	monthdays := map[string]int{
+		"Jan": 31, "Feb": 28, "Mar": 31,
+		"Apr": 30, "May": 31, "Jun": 30,
+		"Jul": 31, "Aug": 31, "Sep": 30,
+		"Oct": 31, "Nov": 30, "Dec": 31,
+	}
+
+	mds := make(map[string]int, 12)
+
+	// mfd := copy(mds, monthdays...)
+	// fmt.Printf("month days is %v copied \n", mds, mfd)
+	// wrong, can't slice map
+
+	alldays := 0
+	i := 0
+	for k, v := range monthdays {
+		alldays += v
+		mds[k] = v
+		i++
+	}
+	fmt.Printf("all days total is %d \n", alldays)
+	fmt.Printf("mds keys are %v \n", mds)
+	fmt.Printf("original map is %v \n", monthdays)
+
 }
 
 func main() {
 
 	reviewArray()
-	reviewSlice()
+	reviewMap()
 
+	//reviewSlice()
 	//fallThrough(0)
 	//fallThrough(1)
 	//fallThrough(2)
