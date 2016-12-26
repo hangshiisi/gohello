@@ -67,10 +67,34 @@ func reviewFuncArray(i int) func() int {
 		1: func() int { return 10 },
 		2: func() int { return 20 },
 		3: func() int { return 30 },
+
 		/* ... */
 	}
 
-	return xs[i]
+	if i < len(xs) && i >= 0 {
+		return xs[i]
+	} else {
+		return func() int { return 3000 }
+	}
+}
+
+// callbacks
+func callback2(y int, f func(int) int) {
+	fmt.Printf("inside callback y is %d \n", y)
+	fmt.Printf("check return value %d \n", f(y+1))
+}
+
+// panic and recover
+func throwsPanic(f func()) (b bool) {
+	defer func() {
+		if x := recover(); x != nil {
+			b = true
+		}
+	}()
+
+	f()
+
+	return b
 }
 
 func main() {
@@ -90,7 +114,12 @@ func main() {
 	fv1 := reviewFuncArray(1)
 	fmt.Printf("the value return is %d \n", fv1())
 
-	fv2 := reviewFuncArray(2)
+	fv2 := reviewFuncArray(20)
 	fmt.Printf("the value return is %d \n", fv2())
 
+	fv3 := func(k int) int {
+		fmt.Printf("Input Function Values %d \n", k)
+		return k * k
+	}
+	callback2(10, fv3)
 }
