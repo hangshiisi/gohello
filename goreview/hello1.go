@@ -97,7 +97,7 @@ func throwsPanic(f func()) (b bool) {
 	return b
 }
 
-func main() {
+func Hello1Main() {
 
 	reviewFunction1()
 	rec(0)

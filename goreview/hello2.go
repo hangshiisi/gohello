@@ -150,7 +150,7 @@ func reviewMap() {
 func test() {
 }
 
-func main() {
+func Hello2Main() {
 
 	reviewArray()
 	reviewMap()
