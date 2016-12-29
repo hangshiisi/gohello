@@ -22,3 +22,10 @@ $ tree
 ├── goproto
 └── gproto1.go
 
+==== Note Two    ==== 
+
+gob codes to do encoding and decoding 
+
+	https://golang.org/pkg/encoding/gob/
+	https://github.com/golang/protobuf
+	

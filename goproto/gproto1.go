@@ -7,7 +7,7 @@ import (
 	"log"
 )
 
-func main() {
+func examMain() {
 	test := &example.Test{
 		Label: proto.String("hello"),
 		Type:  proto.Int32(17),
