@@ -1,0 +1,24 @@
+
+==== Example One ==== 
+
+1. create test.proto file 
+	see file in example sub-directory 
+2. compile it via protoc 
+	protoc --go_out=. *.proto
+3. create golang file to test generated test files 
+	go build
+4. run the generated binary file 
+	$ ./goproto 
+	data match "hello" == "hello" from new and old test data 
+
+note: directory structure 
+
+$ tree
+.
+├── StudyNotes
+├── example
+│   ├── test.pb.go
+│   └── test.proto
+├── goproto
+└── gproto1.go
+
