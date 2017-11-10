@@ -35,16 +35,15 @@ func main() {
 	
 	t4 := time.Now()
 	for i := 1; i < 1000; i++ {
-		x = x + 1
+		//x = x + 1
 		c_rand = Random()
 		// c_rand = int(C.random())
 	}
-
 	t5 := time.Now()
 	dur3 := t5.Sub(t4)
 	fmt.Printf(" x %v, c_rand: %v, dur3: %v \n", x, c_rand, dur3)
 
-	
+
 	r := rand.New(rand.NewSource(99))
 	t6 := time.Now()
 	for i := 1; i < 1000; i++ {

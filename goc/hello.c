@@ -1,6 +1,7 @@
 #include <stdio.h> 
+#include "_cgo_export.h"
 
-int main() 
+int main2() 
 { 
 	
 	printf("Hello World From C!\n"); 
