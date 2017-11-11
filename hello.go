@@ -47,7 +47,7 @@ func main() {
 	r := rand.New(rand.NewSource(99))
 	t6 := time.Now()
 	for i := 1; i < 1000; i++ {
-		x = x + 1
+		//x = x + 1
 		c_rand = r.Intn(10000000000)
 	}
 

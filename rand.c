@@ -12,7 +12,7 @@ int main()
 	clock_t start, end; 
 
 
-	n = 10000000; 
+	n = 100000000; 
 
 	srand((unsigned)time(&t1)); 
 	printf("hello world\n"); 
